@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    container_name: nevis-search-app
+    ports:
+      - "8080:8080"
+    environment:
+      EMBEDDING_BASE_URL: http://host.docker.internal:11434/v1/embeddings
+      EMBEDDING_MODEL: all-minilm
+      SPRING_DATASOURCE_URL: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.h2.Driver
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.H2Dialect
+      SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop

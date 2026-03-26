@@ -1,0 +1,74 @@
+package com.nevis.search.embedding;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+
+import java.util.List;
+import java.util.Map;
+
+@Service
+public class EmbeddingService {
+
+    private final RestTemplate restTemplate;
+
+    @Value("${openai.api.key:}")
+    private String apiKey;
+
+    @Value("${embedding.base-url:http://host.docker.internal:11434/v1/embeddings}")
+    private String embeddingBaseUrl;
+
+    @Value("${embedding.model:nomic-embed-text}")
+    private String embeddingModel;
+
+    public EmbeddingService(
+            @Value("${embedding.connect-timeout-ms:3000}") int connectTimeoutMs,
+            @Value("${embedding.read-timeout-ms:15000}") int readTimeoutMs
+    ) {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(connectTimeoutMs);
+        requestFactory.setReadTimeout(readTimeoutMs);
+        this.restTemplate = new RestTemplate(requestFactory);
+    }
+
+    public List<Double> getEmbedding(String text) {
+        Map<String, Object> request = Map.of(
+                "input", text,
+                "model", embeddingModel
+        );
+
+        HttpHeaders headers = new HttpHeaders();
+        if (StringUtils.hasText(apiKey)) {
+            headers.setBearerAuth(apiKey);
+        }
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<?> entity = new HttpEntity<>(request, headers);
+
+        ResponseEntity<Map> response;
+        try {
+            response = restTemplate.postForEntity(
+                    embeddingBaseUrl,
+                    entity,
+                    Map.class
+            );
+        } catch (RestClientResponseException ex) {
+            throw new IllegalStateException("Embedding provider error: " + ex.getRawStatusCode() + " " + ex.getStatusText(), ex);
+        } catch (ResourceAccessException ex) {
+            throw new IllegalStateException("Embedding provider timeout or connection failure: " + embeddingBaseUrl, ex);
+        }
+
+        List<?> data = (List<?>) response.getBody().get("data");
+        Map<?, ?> embeddingObj = (Map<?, ?>) data.get(0);
+
+        return (List<Double>) embeddingObj.get("embedding");
+    }
+}
