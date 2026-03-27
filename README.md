@@ -1,6 +1,11 @@
 # Nevis Search API
 
-Spring Boot service exposing only the task-relevant client and document search APIs for a WealthTech workflow, backed by local Ollama/LocalAI by default.
+Spring Boot service exposing the three task-relevant APIs for a WealthTech search workflow:
+- `POST /clients`
+- `POST /clients/{id}/documents`
+- `GET /search?q=...`
+
+The service uses local Ollama/LocalAI by default and supports deterministic fallback embeddings for local Docker testing.
 
 ## Approach
 - Spring Boot provides the REST API layer and application wiring.
@@ -20,7 +25,6 @@ Spring Boot service exposing only the task-relevant client and document search A
 3. Create a client with `POST /clients`.
 4. Add a document with `POST /clients/{id}/documents`.
 5. Run `GET /search?q=...` and verify client/document matches.
-6. Commit locally with Git and push to GitHub over HTTPS.
 
 ## Assumptions
 - Local development should work without any paid external API dependency.
@@ -52,6 +56,26 @@ Spring Boot service exposing only the task-relevant client and document search A
 - `POST /clients` — creates a client with first name, last name, email, description, and social links.
 - `POST /clients/{id}/documents` — stores a document for a specific client and generates embeddings from content.
 - `GET /search?q=...` — searches across clients and documents, returning typed client/document results.
+
+## Request Bodies
+`POST /clients`
+```json
+{
+  "first_name": "John",
+  "last_name": "Doe",
+  "email": "john.doe@neviswealth.com",
+  "description": "Advisor",
+  "social_links": ["https://linkedin.com/in/johndoe"]
+}
+```
+
+`POST /clients/{id}/documents`
+```json
+{
+  "title": "Residency",
+  "content": "utility bill"
+}
+```
 
 ## Prerequisites
 - Java 17
@@ -89,6 +113,24 @@ curl -X POST http://localhost:8080/clients/<CLIENT_ID>/documents \
 curl "http://localhost:8080/search?q=address%20proof"
 ```
 
+Typical search result:
+```json
+[
+  {
+    "type": "DOCUMENT",
+    "client": null,
+    "document": {
+      "id": "dc2259f1-5f2d-4845-af44-08c6adb55bfe",
+      "client_id": "4e3b3cd7-8978-4550-ae9a-dfc4bcab5907",
+      "title": "Residency",
+      "content": "utility bill",
+      "created_at": "2026-03-27T00:57:35.669279"
+    },
+    "score": 0.9
+  }
+]
+```
+
 ### Local build
 1. `mvn clean package` (produces an executable Spring Boot jar)
 2. `java -jar target/search-api-1.0.0.jar`
@@ -109,6 +151,9 @@ docker run -p 8080:8080 \
 ## Tests
 - The remaining tests focus on the current API contract and the search behavior behind it.
 - Unit/integration tests use an H2 in-memory DB and stubbed/mocked embedding provider behavior, so they do not depend on Ollama or OpenAI.
+- Current automated coverage is centered on:
+  - controller integration tests for `/clients`, `/clients/{id}/documents`, and `/search`
+  - unit tests for document ranking and related-term matching
 ```bash
 mvn test
 ```
@@ -137,11 +182,3 @@ mvn test
 - Improved local search behavior with hybrid lexical and synonym-aware document matching.
 - Reduced the public API surface to essential task endpoints only: `/clients`, `/clients/{id}/documents`, and `/search`.
 - Removed stale OpenAPI/embedding endpoint support and redundant tests that were no longer tied to the current API contract.
-
-## GitHub HTTPS push
-```bash
-git add .
-git commit -m "Update project"
-git remote set-url origin https://github.com/subhayu89/nevis-search-api.git
-git push -u origin main
-```
