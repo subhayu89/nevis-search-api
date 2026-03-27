@@ -12,7 +12,7 @@ The service uses local Ollama/LocalAI by default and supports deterministic fall
 - Documents are stored through JPA and enriched with embeddings at write time.
 - Search generates an embedding for the query, compares it with stored document embeddings using cosine similarity, and merges those results with client text search results.
 - Document search uses hybrid ranking: embedding similarity plus lexical and synonym-aware matching for practical local behavior.
-- The embedding provider is accessed through an abstraction so the implementation can be swapped between local and remote providers.
+- The embedding service calls a configurable provider endpoint directly and supports deterministic fallback embeddings for local Docker testing.
 - API responses use explicit DTOs and centralized exception handling to keep the HTTP contract predictable.
 - Ollama/LocalAI is used as the default embedding provider so the project can run locally without any paid API dependency.
 - A deterministic fallback embedding mode is available for local Docker testing when Ollama is unreachable.

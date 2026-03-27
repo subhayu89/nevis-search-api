@@ -2,6 +2,7 @@ package com.nevis.search.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nevis.search.dto.SearchResultDTO;
+import com.nevis.search.embedding.EmbeddingService;
 import com.nevis.search.model.Document;
 import com.nevis.search.repository.ClientRepository;
 import com.nevis.search.repository.DocumentRepository;
@@ -155,14 +156,17 @@ class DocumentServiceUnitTest {
         assertEquals("Residency", results.get(0).document().title());
     }
 
-    private static class StubEmbeddingService implements com.nevis.search.embedding.EmbeddingClient {
+    private static class StubEmbeddingService extends EmbeddingService {
         private final java.util.Map<String, List<Double>> vectors = new java.util.HashMap<>();
+
+        private StubEmbeddingService() {
+            super(new org.springframework.web.client.RestTemplate());
+        }
 
         void setVector(String text, List<Double> vector) {
             vectors.put(text, vector);
         }
 
-        @Override
         public List<Double> getEmbedding(String text) {
             return vectors.getOrDefault(text, List.of());
         }

@@ -5,11 +5,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.mock.http.client.MockClientHttpResponse;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
@@ -47,16 +45,14 @@ class EmbeddingServiceUnitTest {
         server.expect(once(), requestTo("http://localhost:11434/v1/embeddings"))
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(request -> {
-                    MockClientHttpResponse response = new MockClientHttpResponse(
-                            "{\"error\":\"boom\"}".getBytes(StandardCharsets.UTF_8),
-                            HttpStatus.INTERNAL_SERVER_ERROR
-                    );
-                    response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
                     throw HttpServerErrorException.create(
                             HttpStatus.INTERNAL_SERVER_ERROR,
                             "Internal Server Error",
-                            response.getHeaders(),
-                            response.getBodyAsByteArray(),
+                            org.springframework.http.HttpHeaders.of(
+                                    java.util.Map.of("Content-Type", java.util.List.of(MediaType.APPLICATION_JSON_VALUE)),
+                                    (name, value) -> true
+                            ),
+                            "{\"error\":\"boom\"}".getBytes(StandardCharsets.UTF_8),
                             StandardCharsets.UTF_8
                     );
                 });
@@ -70,7 +66,7 @@ class EmbeddingServiceUnitTest {
     @Test
     void getEmbedding_shouldFallbackWhenProviderTimesOut() {
         server.expect(once(), requestTo("http://localhost:11434/v1/embeddings"))
-                .andRespond(withException(new ResourceAccessException("timeout", new IOException(new SocketTimeoutException("read timed out")))));
+                .andRespond(withException(new IOException(new SocketTimeoutException("read timed out"))));
 
         var result = embeddingService.getEmbedding("hello");
 

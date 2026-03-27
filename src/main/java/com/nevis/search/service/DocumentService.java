@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nevis.search.dto.ClientResponse;
 import com.nevis.search.dto.DocumentResponse;
 import com.nevis.search.dto.SearchResultDTO;
-import com.nevis.search.embedding.EmbeddingClient;
+import com.nevis.search.embedding.EmbeddingService;
 import com.nevis.search.model.Client;
 import com.nevis.search.model.Document;
 import com.nevis.search.repository.ClientRepository;
@@ -32,22 +32,22 @@ public class DocumentService {
 
     private final DocumentRepository documentRepository;
     private final ClientRepository clientRepository;
-    private final EmbeddingClient embeddingClient;
+    private final EmbeddingService embeddingService;
     private final ObjectMapper objectMapper;
 
     public DocumentService(DocumentRepository documentRepository,
                            ClientRepository clientRepository,
-                           EmbeddingClient embeddingClient,
+                           EmbeddingService embeddingService,
                            ObjectMapper objectMapper) {
         this.documentRepository = documentRepository;
         this.clientRepository = clientRepository;
-        this.embeddingClient = embeddingClient;
+        this.embeddingService = embeddingService;
         this.objectMapper = objectMapper;
     }
 
     @Transactional
     public Document save(Document doc) {
-        List<Double> vector = embeddingClient.getEmbedding(doc.getContent());
+        List<Double> vector = embeddingService.getEmbedding(doc.getContent());
         try {
             doc.setEmbedding(objectMapper.writeValueAsString(vector));
         } catch (Exception e) {
@@ -71,7 +71,7 @@ public class DocumentService {
             throw new IllegalArgumentException("query must not be blank");
         }
 
-        List<Double> queryVector = embeddingClient.getEmbedding(query);
+        List<Double> queryVector = embeddingService.getEmbedding(query);
 
         List<SearchResultDTO> docResults = documentRepository.findAll().stream()
                 .map(doc -> new ScoredResult(doc, score(query, queryVector, doc)))

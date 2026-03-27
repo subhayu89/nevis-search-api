@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class EmbeddingService implements EmbeddingClient {
+public class EmbeddingService {
 
     private final RestTemplate restTemplate;
 
@@ -51,11 +51,10 @@ public class EmbeddingService implements EmbeddingClient {
         this.restTemplate = new RestTemplate(requestFactory);
     }
 
-    EmbeddingService(RestTemplate restTemplate) {
+    public EmbeddingService(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
 
-    @Override
     public List<Double> getEmbedding(String text) {
         Map<String, Object> request = Map.of(
                 "input", text,

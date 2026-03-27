@@ -1,9 +1,10 @@
 package com.nevis.search.config;
 
-import com.nevis.search.embedding.EmbeddingClient;
+import com.nevis.search.embedding.EmbeddingService;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
 import java.util.List;
@@ -18,9 +19,13 @@ public class TestEmbeddingConfig {
         return new StubEmbeddingService();
     }
 
-    public static class StubEmbeddingService implements EmbeddingClient {
+    public static class StubEmbeddingService extends EmbeddingService {
         private final Map<String, List<Double>> vectors = new HashMap<>();
         private final Map<String, RuntimeException> failures = new HashMap<>();
+
+        public StubEmbeddingService() {
+            super(new RestTemplate());
+        }
 
         public void setVector(String text, List<Double> vector) {
             vectors.put(text, vector);
@@ -35,7 +40,6 @@ public class TestEmbeddingConfig {
             failures.clear();
         }
 
-        @Override
         public List<Double> getEmbedding(String text) {
             if (failures.containsKey(text)) {
                 throw failures.get(text);
