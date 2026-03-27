@@ -98,6 +98,20 @@ class SearchControllerIntegrationTest {
     }
 
     @Test
+    void search_shouldMatchRelatedDocumentTerms() throws Exception {
+        DocumentRequest request = new DocumentRequest(null, "Residency", "utility bill");
+
+        mockMvc.perform(post("/api/documents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/search").param("q", "address proof"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[1].document.title").value("Residency"));
+    }
+
+    @Test
     void createEmbedding_shouldReturnValidationErrorForBlankText() throws Exception {
         mockMvc.perform(post("/api/embedding")
                         .contentType(MediaType.APPLICATION_JSON)

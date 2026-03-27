@@ -134,6 +134,25 @@ class DocumentServiceUnitTest {
         assertEquals("Weak", results.get(2).document().title());
     }
 
+    @Test
+    void search_shouldMatchDocumentByRelatedTerms() throws Exception {
+        embeddingService.setVector("address proof", List.of(0.0, 0.0));
+
+        Document related = new Document();
+        related.setId(UUID.randomUUID());
+        related.setTitle("Residency");
+        related.setContent("Please upload a recent utility bill");
+        related.setEmbedding(objectMapper.writeValueAsString(List.of(0.0, 0.0)));
+
+        when(documentRepository.findAll()).thenReturn(List.of(related));
+        when(clientRepository.search("address proof")).thenReturn(List.of());
+
+        List<SearchResultDTO> results = documentService.search("address proof");
+
+        assertEquals(1, results.size());
+        assertEquals("Residency", results.get(0).document().title());
+    }
+
     private static class StubEmbeddingService implements com.nevis.search.embedding.EmbeddingClient {
         private final java.util.Map<String, List<Double>> vectors = new java.util.HashMap<>();
 
