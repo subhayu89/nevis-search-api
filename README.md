@@ -9,10 +9,11 @@ Spring Boot service exposing semantic document search and an embedding endpoint 
 - The embedding provider is accessed through an abstraction so the implementation can be swapped between local and remote providers.
 - API responses use explicit DTOs and centralized exception handling to keep the HTTP contract predictable.
 - Ollama/LocalAI is used as the default embedding provider so the project can run locally without any paid API dependency.
+- A deterministic fallback embedding mode is available for local Docker testing when Ollama is unreachable.
 - H2 is used for simple local and Docker testing, while PostgreSQL configuration remains available for a persistent environment.
 
 ## Workflow
-1. Start Ollama locally and pull a small embedding model such as `all-minilm`.
+1. Start Ollama locally and pull a small embedding model such as `all-minilm`, or rely on Docker fallback mode for local smoke testing.
 2. Start the API locally with Maven or in Docker with the provided compose file.
 3. Verify the app with `GET /api/health`.
 4. Test `POST /api/embedding`, `POST /api/documents`, and `GET /api/search`, including validation and failure paths.
@@ -31,6 +32,7 @@ Spring Boot service exposing semantic document search and an embedding endpoint 
 - Semantic search is computed in application code, which is easy to understand and demo but less efficient than database-level vector indexing.
 - H2 in Docker removes infrastructure friction, but behavior may differ slightly from PostgreSQL in production.
 - Ollama removes API cost and key management, but model quality, model availability, and local machine resources become operational dependencies.
+- Fallback embeddings keep the app testable when Ollama is unavailable, but semantic quality is much weaker than a real embedding model.
 - The current API now has explicit validation and structured error handling, but it still favors straightforward implementation over advanced resilience features such as retries, async embedding jobs, or caching.
 
 ## Future Improvements
@@ -68,6 +70,7 @@ mvn spring-boot:run
 docker compose up --build
 ```
 Compose starts the app on port 8080 with an in-memory H2 database and expects Ollama on the host at `http://localhost:11434`.
+The compose file also enables deterministic fallback embeddings, so the app remains testable even if Ollama is unreachable from the container.
 
 ## API smoke test
 ```bash
@@ -81,7 +84,7 @@ curl -X POST http://localhost:8080/api/documents \
   -H "Content-Type: application/json" \
   -d '{"clientId":null,"title":"Test doc","content":"address proof requirements"}'
 
-curl "http://localhost:8080/api/search?q=address%20proof"
+curl "http://localhost:8080/api/search?q=address%20proof%20requirements"
 ```
 
 ### Local build
@@ -110,6 +113,8 @@ mvn test
 ## Configuration
 - `EMBEDDING_BASE_URL` (default `http://host.docker.internal:11434/v1/embeddings` for Ollama/LocalAI)
 - `EMBEDDING_MODEL` (default `nomic-embed-text`; `all-minilm` is a lighter local option)
+- `EMBEDDING_FALLBACK_ENABLED` (enables deterministic local embeddings when the configured provider is unavailable)
+- `EMBEDDING_FALLBACK_DIMENSIONS` (vector size used by the fallback embedding generator)
 - `OPENAI_API_KEY` (only needed if you point `EMBEDDING_BASE_URL` to `https://api.openai.com/v1/embeddings`)
 - `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` for PostgreSQL
 
@@ -125,6 +130,7 @@ mvn test
 - Dockerfile/compose aligned to local Docker + H2 + Ollama workflow.
 - Test profile uses H2 and stub embeddings for offline testing.
 - Added validation, structured API error responses, typed search payloads, and broader unit/integration test coverage.
+- Added deterministic fallback embeddings so Docker-based local testing does not hang when Ollama is unavailable.
 
 ## GitHub HTTPS push
 ```bash

@@ -6,9 +6,9 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.client.MockRestServiceServer;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.IOException;
 import java.net.SocketTimeoutException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -62,7 +62,7 @@ class EmbeddingServiceUnitTest {
     @Test
     void getEmbedding_shouldMapTimeoutFailures() {
         server.expect(once(), requestTo("http://localhost:11434/v1/embeddings"))
-                .andRespond(withException(new ResourceAccessException("timeout", new SocketTimeoutException("read timed out"))));
+                .andRespond(withException(new IOException(new SocketTimeoutException("read timed out"))));
 
         assertThrows(IllegalStateException.class, () -> embeddingService.getEmbedding("hello"));
     }
