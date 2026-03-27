@@ -1,6 +1,6 @@
 # Nevis Search API
 
-Spring Boot service exposing simplified client and document search APIs for a WealthTech workflow, backed by local Ollama/LocalAI by default.
+Spring Boot service exposing only the task-relevant client and document search APIs for a WealthTech workflow, backed by local Ollama/LocalAI by default.
 
 ## Approach
 - Spring Boot provides the REST API layer and application wiring.
@@ -12,6 +12,7 @@ Spring Boot service exposing simplified client and document search APIs for a We
 - Ollama/LocalAI is used as the default embedding provider so the project can run locally without any paid API dependency.
 - A deterministic fallback embedding mode is available for local Docker testing when Ollama is unreachable.
 - H2 is used for simple local and Docker testing, while PostgreSQL configuration remains available for a persistent environment.
+- The codebase has been trimmed to keep only the files and tests that support the current public API surface.
 
 ## Workflow
 1. Start Ollama locally and pull a small embedding model such as `all-minilm`, or rely on Docker fallback mode for local smoke testing.
@@ -51,7 +52,6 @@ Spring Boot service exposing simplified client and document search APIs for a We
 - `POST /clients` — creates a client with first name, last name, email, description, and social links.
 - `POST /clients/{id}/documents` — stores a document for a specific client and generates embeddings from content.
 - `GET /search?q=...` — searches across clients and documents, returning typed client/document results.
-- Swagger UI available at `/swagger-ui.html`.
 
 ## Prerequisites
 - Java 17
@@ -107,6 +107,7 @@ docker run -p 8080:8080 \
 ```
 [application.properties](src/main/resources/application.properties)
 ## Tests
+- The remaining tests focus on the current API contract and the search behavior behind it.
 - Unit/integration tests use an H2 in-memory DB and stubbed/mocked embedding provider behavior, so they do not depend on Ollama or OpenAI.
 ```bash
 mvn test
@@ -131,10 +132,11 @@ mvn test
 - Added semantic search pipeline (documents + clients) with embeddings.
 - Dockerfile/compose aligned to local Docker + H2 + Ollama workflow.
 - Test profile uses H2 and stub embeddings for offline testing.
-- Added validation, structured API error responses, typed search payloads, and broader unit/integration test coverage.
+- Added validation, structured API error responses, typed search payloads, and focused unit/integration test coverage.
 - Added deterministic fallback embeddings so Docker-based local testing does not hang when Ollama is unavailable.
 - Improved local search behavior with hybrid lexical and synonym-aware document matching.
 - Reduced the public API surface to essential task endpoints only: `/clients`, `/clients/{id}/documents`, and `/search`.
+- Removed stale OpenAPI/embedding endpoint support and redundant tests that were no longer tied to the current API contract.
 
 ## GitHub HTTPS push
 ```bash
