@@ -20,6 +20,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -174,5 +175,26 @@ class SearchControllerIntegrationTest {
                                 """))
                 .andExpect(status().isBadGateway())
                 .andExpect(jsonPath("$.message").value("Embedding provider timeout or connection failure"));
+    }
+
+    @Test
+    void createDocument_shouldReturnBadRequestWhenClientDoesNotExist() throws Exception {
+        mockMvc.perform(post("/clients/{id}/documents", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"Residency","content":"utility bill"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.startsWith("client not found: ")));
+    }
+
+    @Test
+    void search_shouldReturnClientMatchForEmailQuery() throws Exception {
+        mockMvc.perform(get("/search").param("q", "neviswealth"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].type").value("CLIENT"))
+                .andExpect(jsonPath("$[0].client.email").value("john.doe@neviswealth.com"))
+                .andExpect(jsonPath("$[0].client.first_name").value("Acme"))
+                .andExpect(jsonPath("$[0].document").doesNotExist());
     }
 }
