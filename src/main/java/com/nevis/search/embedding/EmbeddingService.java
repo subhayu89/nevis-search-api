@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class EmbeddingService {
+public class EmbeddingService implements EmbeddingClient {
 
     private final RestTemplate restTemplate;
 
@@ -39,6 +39,11 @@ public class EmbeddingService {
         this.restTemplate = new RestTemplate(requestFactory);
     }
 
+    EmbeddingService(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
+
+    @Override
     public List<Double> getEmbedding(String text) {
         Map<String, Object> request = Map.of(
                 "input", text,
@@ -66,7 +71,14 @@ public class EmbeddingService {
             throw new IllegalStateException("Embedding provider timeout or connection failure: " + embeddingBaseUrl, ex);
         }
 
+        if (response.getBody() == null || response.getBody().get("data") == null) {
+            throw new IllegalStateException("Embedding provider returned an invalid response");
+        }
+
         List<?> data = (List<?>) response.getBody().get("data");
+        if (data.isEmpty()) {
+            throw new IllegalStateException("Embedding provider returned no embedding data");
+        }
         Map<?, ?> embeddingObj = (Map<?, ?>) data.get(0);
 
         return (List<Double>) embeddingObj.get("embedding");

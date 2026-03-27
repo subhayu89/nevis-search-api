@@ -1,10 +1,11 @@
 package com.nevis.search.controller;
 
 import com.nevis.search.dto.*;
-import com.nevis.search.embedding.EmbeddingService;
+import com.nevis.search.embedding.EmbeddingClient;
 import com.nevis.search.model.Document;
 import com.nevis.search.service.DocumentService;
 import com.nevis.search.service.SearchService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,12 +14,12 @@ import java.util.List;
 @RequestMapping("/api")
 public class SearchController {
 
-    private final EmbeddingService embeddingService;
+    private final EmbeddingClient embeddingClient;
     private final DocumentService documentService;
     private final SearchService searchService;
 
-    public SearchController(EmbeddingService embeddingService, DocumentService documentService, SearchService searchService) {
-        this.embeddingService = embeddingService;
+    public SearchController(EmbeddingClient embeddingClient, DocumentService documentService, SearchService searchService) {
+        this.embeddingClient = embeddingClient;
         this.documentService = documentService;
         this.searchService = searchService;
     }
@@ -34,12 +35,12 @@ public class SearchController {
     }
 
     @PostMapping("/embedding")
-    public EmbeddingResponse createEmbedding(@RequestBody EmbeddingRequest request) {
-        return new EmbeddingResponse(embeddingService.getEmbedding(request.text()));
+    public EmbeddingResponse createEmbedding(@Valid @RequestBody EmbeddingRequest request) {
+        return new EmbeddingResponse(embeddingClient.getEmbedding(request.text()));
     }
 
     @PostMapping("/documents")
-    public DocumentResponse createDocument(@RequestBody DocumentRequest request) {
+    public DocumentResponse createDocument(@Valid @RequestBody DocumentRequest request) {
         Document doc = new Document();
         doc.setClientId(request.clientId());
         doc.setTitle(request.title());

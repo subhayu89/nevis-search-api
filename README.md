@@ -6,6 +6,8 @@ Spring Boot service exposing semantic document search and an embedding endpoint 
 - Spring Boot provides the REST API layer and application wiring.
 - Documents are stored through JPA and enriched with embeddings at write time.
 - Search generates an embedding for the query, compares it with stored document embeddings using cosine similarity, and merges those results with client text search results.
+- The embedding provider is accessed through an abstraction so the implementation can be swapped between local and remote providers.
+- API responses use explicit DTOs and centralized exception handling to keep the HTTP contract predictable.
 - Ollama/LocalAI is used as the default embedding provider so the project can run locally without any paid API dependency.
 - H2 is used for simple local and Docker testing, while PostgreSQL configuration remains available for a persistent environment.
 
@@ -13,7 +15,7 @@ Spring Boot service exposing semantic document search and an embedding endpoint 
 1. Start Ollama locally and pull a small embedding model such as `all-minilm`.
 2. Start the API locally with Maven or in Docker with the provided compose file.
 3. Verify the app with `GET /api/health`.
-4. Test `POST /api/embedding`, `POST /api/documents`, and `GET /api/search`.
+4. Test `POST /api/embedding`, `POST /api/documents`, and `GET /api/search`, including validation and failure paths.
 5. Commit locally with Git and push to GitHub over HTTPS.
 
 ## Assumptions
@@ -22,27 +24,27 @@ Spring Boot service exposing semantic document search and an embedding endpoint 
 - H2 is sufficient for local validation, while PostgreSQL is intended for more realistic persistent environments.
 - The current dataset size is small enough that in-memory scoring over stored document embeddings is acceptable.
 - Client search can be handled with basic text matching while document search uses semantic similarity.
+- Consumers of the API benefit from stable, typed response payloads rather than loose object-shaped responses.
 
 ## Tradeoffs
 - Embeddings are stored as JSON text rather than in a vector-native database, which keeps setup simple but does not scale well for large datasets.
 - Semantic search is computed in application code, which is easy to understand and demo but less efficient than database-level vector indexing.
 - H2 in Docker removes infrastructure friction, but behavior may differ slightly from PostgreSQL in production.
 - Ollama removes API cost and key management, but model quality, model availability, and local machine resources become operational dependencies.
-- The current API favors straightforward implementation over advanced resilience features such as retries, async embedding jobs, or caching.
+- The current API now has explicit validation and structured error handling, but it still favors straightforward implementation over advanced resilience features such as retries, async embedding jobs, or caching.
 
 ## Future Improvements
 - Replace JSON-stored embeddings with a vector-capable database such as PostgreSQL with `pgvector`.
 - Move semantic similarity search closer to the database layer instead of scanning all documents in application memory.
-- Add stronger API validation and structured error responses for invalid requests and embedding-provider failures.
 - Introduce asynchronous document ingestion so embedding generation does not block write requests.
-- Expand automated coverage with controller-level integration tests and embedding-provider contract tests.
+- Expand automated coverage further with repository integration tests and more failure-mode contract tests.
 - Add production-ready health/readiness checks, metrics, and structured logging for easier operations.
 
 ## Endpoints
 - `GET /api/health` — lightweight health check returning `{ "status": "ok" }`.
 - `POST /api/embedding` — body `{ "text": "..." }` returns `{ "embedding": [ ... ] }`.
 - `POST /api/documents` — body `{ "clientId": "...", "title": "...", "content": "..." }` stores a document and embeds its content.
-- `GET /api/search?q=...` — semantic search combining clients and documents.
+- `GET /api/search?q=...` — semantic search combining typed client and document results.
 - Swagger UI available at `/swagger-ui.html`.
 
 ## Prerequisites
@@ -100,7 +102,7 @@ docker run -p 8080:8080 \
 ```
 [application.properties](src/main/resources/application.properties)
 ## Tests
-- Unit/integration tests use an H2 in‑memory DB and a stubbed `EmbeddingService` (no real OpenAI calls).
+- Unit/integration tests use an H2 in-memory DB and stubbed/mocked embedding provider behavior, so they do not depend on Ollama or OpenAI.
 ```bash
 mvn test
 ```
@@ -122,6 +124,7 @@ mvn test
 - Added semantic search pipeline (documents + clients) with embeddings.
 - Dockerfile/compose aligned to local Docker + H2 + Ollama workflow.
 - Test profile uses H2 and stub embeddings for offline testing.
+- Added validation, structured API error responses, typed search payloads, and broader unit/integration test coverage.
 
 ## GitHub HTTPS push
 ```bash

@@ -59,6 +59,7 @@ class SearchControllerIntegrationTest {
     void setup() {
         documentRepository.deleteAll();
         clientRepository.deleteAll();
+        embeddingService.reset();
         embeddingService.setVector("hello world", List.of(1.0, 0.0, 0.0));
         embeddingService.setVector("address proof", List.of(1.0, 0.0, 0.0));
         embeddingService.setVector("address proof requirements", List.of(1.0, 0.0, 0.0));
@@ -91,6 +92,53 @@ class SearchControllerIntegrationTest {
         mockMvc.perform(get("/api/search").param("q", "address proof"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].type").exists())
-                .andExpect(jsonPath("$[*].type").isArray());
+                .andExpect(jsonPath("$[0].client").exists())
+                .andExpect(jsonPath("$[1].document.title").value("Test doc"))
+                .andExpect(jsonPath("$[1].score").value(1.0));
+    }
+
+    @Test
+    void createEmbedding_shouldReturnValidationErrorForBlankText() throws Exception {
+        mockMvc.perform(post("/api/embedding")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"text":""}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Request validation failed"))
+                .andExpect(jsonPath("$.validationErrors.text").value("text is required"));
+    }
+
+    @Test
+    void createDocument_shouldReturnValidationErrorForBlankFields() throws Exception {
+        mockMvc.perform(post("/api/documents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"clientId":null,"title":"","content":""}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Request validation failed"))
+                .andExpect(jsonPath("$.validationErrors.title").value("title is required"))
+                .andExpect(jsonPath("$.validationErrors.content").value("content is required"));
+    }
+
+    @Test
+    void search_shouldReturnBadRequestForBlankQuery() throws Exception {
+        mockMvc.perform(get("/api/search").param("q", " "))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("query must not be blank"));
+    }
+
+    @Test
+    void embeddingFailure_shouldReturnStructuredBadGateway() throws Exception {
+        embeddingService.setFailure("explode", new IllegalStateException("Embedding provider timeout or connection failure"));
+
+        mockMvc.perform(post("/api/embedding")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"text":"explode"}
+                                """))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.message").value("Embedding provider timeout or connection failure"));
     }
 }

@@ -1,3 +1,5 @@
 package com.nevis.search.dto;
 
-public record EmbeddingRequest(String text) {}
+import jakarta.validation.constraints.NotBlank;
+
+public record EmbeddingRequest(@NotBlank(message = "text is required") String text) {}
