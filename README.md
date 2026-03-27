@@ -2,6 +2,42 @@
 
 Spring Boot service exposing semantic document search and an embedding endpoint backed by local Ollama/LocalAI by default.
 
+## Approach
+- Spring Boot provides the REST API layer and application wiring.
+- Documents are stored through JPA and enriched with embeddings at write time.
+- Search generates an embedding for the query, compares it with stored document embeddings using cosine similarity, and merges those results with client text search results.
+- Ollama/LocalAI is used as the default embedding provider so the project can run locally without any paid API dependency.
+- H2 is used for simple local and Docker testing, while PostgreSQL configuration remains available for a persistent environment.
+
+## Workflow
+1. Start Ollama locally and pull a small embedding model such as `all-minilm`.
+2. Start the API locally with Maven or in Docker with the provided compose file.
+3. Verify the app with `GET /api/health`.
+4. Test `POST /api/embedding`, `POST /api/documents`, and `GET /api/search`.
+5. Commit locally with Git and push to GitHub over HTTPS.
+
+## Assumptions
+- Local development should work without any paid external API dependency.
+- Embeddings can be generated synchronously during document creation for the current scope.
+- H2 is sufficient for local validation, while PostgreSQL is intended for more realistic persistent environments.
+- The current dataset size is small enough that in-memory scoring over stored document embeddings is acceptable.
+- Client search can be handled with basic text matching while document search uses semantic similarity.
+
+## Tradeoffs
+- Embeddings are stored as JSON text rather than in a vector-native database, which keeps setup simple but does not scale well for large datasets.
+- Semantic search is computed in application code, which is easy to understand and demo but less efficient than database-level vector indexing.
+- H2 in Docker removes infrastructure friction, but behavior may differ slightly from PostgreSQL in production.
+- Ollama removes API cost and key management, but model quality, model availability, and local machine resources become operational dependencies.
+- The current API favors straightforward implementation over advanced resilience features such as retries, async embedding jobs, or caching.
+
+## Future Improvements
+- Replace JSON-stored embeddings with a vector-capable database such as PostgreSQL with `pgvector`.
+- Move semantic similarity search closer to the database layer instead of scanning all documents in application memory.
+- Add stronger API validation and structured error responses for invalid requests and embedding-provider failures.
+- Introduce asynchronous document ingestion so embedding generation does not block write requests.
+- Expand automated coverage with controller-level integration tests and embedding-provider contract tests.
+- Add production-ready health/readiness checks, metrics, and structured logging for easier operations.
+
 ## Endpoints
 - `GET /api/health` — lightweight health check returning `{ "status": "ok" }`.
 - `POST /api/embedding` — body `{ "text": "..." }` returns `{ "embedding": [ ... ] }`.
@@ -30,6 +66,21 @@ mvn spring-boot:run
 docker compose up --build
 ```
 Compose starts the app on port 8080 with an in-memory H2 database and expects Ollama on the host at `http://localhost:11434`.
+
+## API smoke test
+```bash
+curl http://localhost:8080/api/health
+
+curl -X POST http://localhost:8080/api/embedding \
+  -H "Content-Type: application/json" \
+  -d '{"text":"hello world"}'
+
+curl -X POST http://localhost:8080/api/documents \
+  -H "Content-Type: application/json" \
+  -d '{"clientId":null,"title":"Test doc","content":"address proof requirements"}'
+
+curl "http://localhost:8080/api/search?q=address%20proof"
+```
 
 ### Local build
 1. `mvn clean package` (produces an executable Spring Boot jar)
@@ -71,3 +122,11 @@ mvn test
 - Added semantic search pipeline (documents + clients) with embeddings.
 - Dockerfile/compose aligned to local Docker + H2 + Ollama workflow.
 - Test profile uses H2 and stub embeddings for offline testing.
+
+## GitHub HTTPS push
+```bash
+git add .
+git commit -m "Update project"
+git remote set-url origin https://github.com/subhayu89/nevis-search-api.git
+git push -u origin main
+```
