@@ -120,7 +120,9 @@ class DocumentServiceUnitTest {
         weak.setEmbedding(objectMapper.writeValueAsString(List.of(0.8, 0.2)));
 
         var client = new com.nevis.search.model.Client();
-        client.setName("Acme");
+        client.setFirstName("Acme");
+        client.setLastName("Bank");
+        client.setEmail("acme@example.com");
         client.setDescription("desc");
 
         when(documentRepository.findAll()).thenReturn(List.of(weak, strong));

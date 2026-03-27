@@ -56,6 +56,15 @@ public class DocumentService {
         return documentRepository.save(doc);
     }
 
+    @Transactional
+    public Document saveForClient(java.util.UUID clientId, String title, String content) {
+        Document document = new Document();
+        document.setClientId(clientId);
+        document.setTitle(title);
+        document.setContent(content);
+        return save(document);
+    }
+
     @Transactional(readOnly = true)
     public List<SearchResultDTO> search(String query) {
         if (query == null || query.isBlank()) {
@@ -148,7 +157,14 @@ public class DocumentService {
     }
 
     private ClientResponse toClientResponse(Client client) {
-        return new ClientResponse(client.getId(), client.getName(), client.getDescription());
+        return new ClientResponse(
+                client.getId(),
+                client.getFirstName(),
+                client.getLastName(),
+                client.getEmail(),
+                client.getDescription(),
+                client.getSocialLinks()
+        );
     }
 
     private record ScoredResult(Document data, double score) {}

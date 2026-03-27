@@ -10,6 +10,13 @@ import java.util.UUID;
 
 public interface ClientRepository extends JpaRepository<Client, UUID> {
 
-    @Query("select c from Client c where lower(c.name) like lower(concat('%', :q, '%')) or lower(c.description) like lower(concat('%', :q, '%'))")
+    @Query("""
+            select c from Client c
+            where lower(c.firstName) like lower(concat('%', :q, '%'))
+               or lower(c.lastName) like lower(concat('%', :q, '%'))
+               or lower(concat(c.firstName, ' ', c.lastName)) like lower(concat('%', :q, '%'))
+               or lower(c.email) like lower(concat('%', :q, '%'))
+               or lower(c.description) like lower(concat('%', :q, '%'))
+            """)
     List<Client> search(@Param("q") String query);
 }

@@ -1,6 +1,6 @@
 # Nevis Search API
 
-Spring Boot service exposing semantic document search and an embedding endpoint backed by local Ollama/LocalAI by default.
+Spring Boot service exposing simplified client and document search APIs for a WealthTech workflow, backed by local Ollama/LocalAI by default.
 
 ## Approach
 - Spring Boot provides the REST API layer and application wiring.
@@ -16,9 +16,10 @@ Spring Boot service exposing semantic document search and an embedding endpoint 
 ## Workflow
 1. Start Ollama locally and pull a small embedding model such as `all-minilm`, or rely on Docker fallback mode for local smoke testing.
 2. Start the API locally with Maven or in Docker with the provided compose file.
-3. Verify the app with `GET /api/health`.
-4. Test `POST /api/embedding`, `POST /api/documents`, and `GET /api/search`, including validation and failure paths.
-5. Commit locally with Git and push to GitHub over HTTPS.
+3. Create a client with `POST /clients`.
+4. Add a document with `POST /clients/{id}/documents`.
+5. Run `GET /search?q=...` and verify client/document matches.
+6. Commit locally with Git and push to GitHub over HTTPS.
 
 ## Assumptions
 - Local development should work without any paid external API dependency.
@@ -47,10 +48,9 @@ Spring Boot service exposing semantic document search and an embedding endpoint 
 - Add production-ready health/readiness checks, metrics, and structured logging for easier operations.
 
 ## Endpoints
-- `GET /api/health` — lightweight health check returning `{ "status": "ok" }`.
-- `POST /api/embedding` — body `{ "text": "..." }` returns `{ "embedding": [ ... ] }`.
-- `POST /api/documents` — body `{ "clientId": "...", "title": "...", "content": "..." }` stores a document and embeds its content.
-- `GET /api/search?q=...` — semantic search combining typed client and document results.
+- `POST /clients` — creates a client with first name, last name, email, description, and social links.
+- `POST /clients/{id}/documents` — stores a document for a specific client and generates embeddings from content.
+- `GET /search?q=...` — searches across clients and documents, returning typed client/document results.
 - Swagger UI available at `/swagger-ui.html`.
 
 ## Prerequisites
@@ -78,17 +78,15 @@ The compose file also enables deterministic fallback embeddings, so the app rema
 
 ## API smoke test
 ```bash
-curl http://localhost:8080/api/health
-
-curl -X POST http://localhost:8080/api/embedding \
+curl -X POST http://localhost:8080/clients \
   -H "Content-Type: application/json" \
-  -d '{"text":"hello world"}'
+  -d '{"first_name":"John","last_name":"Doe","email":"john.doe@neviswealth.com","description":"Advisor","social_links":["https://linkedin.com/in/johndoe"]}'
 
-curl -X POST http://localhost:8080/api/documents \
+curl -X POST http://localhost:8080/clients/<CLIENT_ID>/documents \
   -H "Content-Type: application/json" \
-  -d '{"clientId":null,"title":"Residency","content":"utility bill"}'
+  -d '{"title":"Residency","content":"utility bill"}'
 
-curl "http://localhost:8080/api/search?q=address%20proof"
+curl "http://localhost:8080/search?q=address%20proof"
 ```
 
 ### Local build
@@ -136,6 +134,7 @@ mvn test
 - Added validation, structured API error responses, typed search payloads, and broader unit/integration test coverage.
 - Added deterministic fallback embeddings so Docker-based local testing does not hang when Ollama is unavailable.
 - Improved local search behavior with hybrid lexical and synonym-aware document matching.
+- Reduced the public API surface to essential task endpoints only: `/clients`, `/clients/{id}/documents`, and `/search`.
 
 ## GitHub HTTPS push
 ```bash
